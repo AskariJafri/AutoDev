@@ -1,7 +1,10 @@
 import os
 
-class Config:
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///users.db'
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-    # Add any necessary configuration here...
+CONFIG = {
+    'DB_HOST': os.environ['DB_HOST'],
+    'DB_PORT': int(os.environ.get('DB_PORT', 5432)),
+    'DB_USER': os.environ['DB_USER'],
+    'DB_PASSWORD': os.environ['DB_PASSWORD'],
+    'PAGE_SIZE': 20,
+    'PAGE_NUMBER': 1
+}

@@ -1,15 +1,19 @@
-from flask import Flask, jsonify, request
-from backend.database import User  # Import updated database model
+from flask import Blueprint, request, jsonify
+from services import search
 
-app = Flask(__name__)
+search_blueprint = Blueprint('search', __name__)
 
-@app.route('/dashboard', methods=['GET'])
-def dashboard():
-    limit = int(request.args.get('limit', 10))  # Default limit to 10 records per page
-    offset = int(request.args.get('offset', 0))
-    users = User.query.offset(offset).limit(limit)
-    data = [user.to_dict() for user in users]
-    return jsonify(data), 200
+@search_blueprint.route('/search', methods=['GET'])
+def get_search_results():
+    query = request.args.get('query')
+    limit = int(request.args.get('limit', 10)) if 'limit' in request.args else None
+    offset = int(request.args.get('offset', 0)) if 'offset' in request.args else None
 
-if __name__ == '__main__':
-    app.run()
+    results, meta = search(query, limit=limit, offset=offset)
+    return jsonify({
+        'results': [result.to_dict() for result in results],
+        'meta': {
+            'total_records': meta['count'],
+            'current_page': meta['page_number']
+        }
+    })
