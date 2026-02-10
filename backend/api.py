@@ -1,36 +1,15 @@
-from flask import Blueprint, request, jsonify
-from auth import authenticate, get_current_user
-from models import User
+from flask import Flask, jsonify, request
+from backend.database import User  # Import updated database model
 
-user_api = Blueprint('user', __name__)
+app = Flask(__name__)
 
-@user_api.route('/login', methods=['POST'])
-def login():
-    email = request.json.get('email')
-    password = request.json.get('password')
+@app.route('/dashboard', methods=['GET'])
+def dashboard():
+    limit = int(request.args.get('limit', 10))  # Default limit to 10 records per page
+    offset = int(request.args.get('offset', 0))
+    users = User.query.offset(offset).limit(limit)
+    data = [user.to_dict() for user in users]
+    return jsonify(data), 200
 
-    try:
-        authenticate(email, password)
-        return jsonify({'message': 'Logged in successfully'}), 200
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-
-@user_api.route('/register', methods=['POST'])
-def register():
-    email = request.json.get('email')
-    password = request.json.get('password')
-
-    try:
-        user = User.validate(email, password)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-        return jsonify({'message': 'User created successfully'}), 201
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-
-@user_api.route('/logout')
-def logout():
-    session.pop('user_id', None)
-    g.user = None
-    return jsonify({'message': 'Logged out successfully'}), 200
+if __name__ == '__main__':
+    app.run()
