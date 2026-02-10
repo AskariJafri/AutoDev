@@ -1,8 +1,7 @@
-from sqlalchemy import Column, String, Email, Boolean
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from werkzeug.security import generate_password_hash, check_password_hash
-from validators import validate_email
+from datetime import datetime
 
 Base = declarative_base()
 
@@ -10,24 +9,38 @@ class User(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True)
-    email = Column(String(120), unique=True, nullable=False)
-    password_hash = Column(String(255))
-    is_active = Column(Boolean, default=True)
+    username = Column(String(50), unique=True, nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
+    password_hash = Column(String(128), nullable=False)
 
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+    def __init__(self, username, email, password):
+        self.username = username
+        self.email = email
+        self.password_hash = self._hash_password(password)
+
+    @staticmethod
+    def _hash_password(password):
+        # Using bcrypt for password hashing
+        import bcrypt
+        return bcrypt.hashpw(str(password).encode('utf-8'), bcrypt.gensalt())
 
     def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+        # Verifying password using bcrypt
+        return bcrypt.checkpw(str(password).encode('utf-8'), self.password_hash)
 
-    @classmethod
-    def validate(cls, email, password):
-        user = cls.query.filter_by(email=email).first()
-        if not user:
-            raise ValueError("Invalid email or password")
+# Create a session maker
+Session = sessionmaker(bind=Base.metadata)
+session = Session()
 
-        if not validate_email(email):
-            raise ValueError("Invalid email format")
+# Import validation schema
+from backend.validators import UserValidator
 
-        if not user.check_password(password):
-            raise ValueError("Invalid password")
+# Define the validation schema for User model
+class UserValidator:
+    def validate(self, user):
+        errors = []
+        if not user.username:
+            errors.append("Username is required")
+        if not user.email:
+            errors.append("Email is required")
+        return errors
