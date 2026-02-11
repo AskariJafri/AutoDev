@@ -1,19 +1,30 @@
-from flask import Blueprint, request, jsonify
-from services import search
+from flask import Flask, request, jsonify
+from backend/services import register_user_service
+from backend.validators import UserRegistrationSchema
+from backend.database import db
 
-search_blueprint = Blueprint('search', __name__)
+app = Flask(__name__)
 
-@search_blueprint.route('/search', methods=['GET'])
-def get_search_results():
-    query = request.args.get('query')
-    limit = int(request.args.get('limit', 10)) if 'limit' in request.args else None
-    offset = int(request.args.get('offset', 0)) if 'offset' in request.args else None
+@app.route('/register', methods=['POST'])
+def register_user():
+    try:
+        # Validate user input
+        schema = UserRegistrationSchema()
+        validated_data = schema.validate(request.json)
 
-    results, meta = search(query, limit=limit, offset=offset)
-    return jsonify({
-        'results': [result.to_dict() for result in results],
-        'meta': {
-            'total_records': meta['count'],
-            'current_page': meta['page_number']
-        }
-    })
+        # Call business logic layer to perform registration
+        result = register_user_service(validated_data)
+        db.session.add(result)
+        db.session.commit()
+
+        return jsonify({"status": "success", "message": "User registered successfully"}), 201
+
+    except ValidationError as e:
+        logger.warning(f"Validation error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error registering user: {e}")
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
