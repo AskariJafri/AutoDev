@@ -1,11 +1,8 @@
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
+from flask_sqlalchemy import SQLAlchemy
 
-Base = declarative_base()
+db = SQLAlchemy()
 
-class User(Base):
-    __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    email = Column(String)
-    limit = Column(Integer)  # New column to track pagination
+def init_db(app):
+    db.init_app(app)
+    with app.app_context():
+        db.create_all()
